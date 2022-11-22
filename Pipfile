@@ -1,0 +1,23 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+numpy = "*"
+plotly = "*"
+pandas = "*"
+wandb = "*"
+python-dotenv = "*"
+imageio = "*"
+kaleido = "*"
+jss-env = {path = "./jss-env"}
+dm-tree = "*"
+ray = {extras = ["rllib"], version = "*"}
+gym = "*"
+tensorflow = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"
