@@ -284,12 +284,6 @@ class JssEnv(gym.Env):
                             time_step += 1
 
     def step(self, action: int):
-        if self.legal_actions[action] == False:
-            raise IllegalActionError(f"""
-            Illegal action was taken at timestep: {self.current_time_step}, \n
-            actions: {self.legal_actions}, \n
-            action: {action} \n
-            """)
         reward = 0.0
         if action == self.jobs:
             self.nb_machine_legal = 0
