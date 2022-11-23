@@ -11,11 +11,12 @@ wandb = "*"
 python-dotenv = "*"
 imageio = "*"
 kaleido = "*"
-jss-env = {path = "./jss-env"}
 dm-tree = "*"
 ray = {extras = ["rllib"], version = "*"}
 gym = "*"
 tensorflow = "*"
+jss-env = {path = "./jss-env"}
+jss-flexible-env = {path = "./jss-flexible-env"}
 
 [dev-packages]
 
