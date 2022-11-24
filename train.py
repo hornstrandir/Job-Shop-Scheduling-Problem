@@ -5,7 +5,7 @@ import multiprocessing as mp
 import numpy as np
 import ray
 import wandb
-from jss_env.envs.jss_env import JssEnv
+from envs import JssEnv
 from utils.config import ENV_CONFIG
 from utils.config import MODIFIED_CONFIG_PPO
 from utils.CustomCallbacks import CustomCallbacks
