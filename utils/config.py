@@ -10,7 +10,8 @@ MODEL_CONFIG = {
 }
 
 ENV_CONFIG = {
-    "instance_path": ROOT / "data/instances/ta02"
+    "instance_path": ROOT / "data/instances/ta02",
+    "disable_env_checking": True,
 }
 MODIFIED_CONFIG_PPO = {
     "env": "JssEnv-v0", 

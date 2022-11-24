@@ -1,7 +1,7 @@
 import gym
 import unittest
 from pathlib import Path
-from jss_env.envs import JssEnv
+from envs import JssEnv
 
 
 class TestSolution(unittest.TestCase):

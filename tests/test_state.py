@@ -2,7 +2,7 @@ import gym
 import unittest
 import numpy as np
 from pathlib import Path
-from jss_env.envs import JssEnv
+from envs import JssEnv
 from utils.env_config import env_config
 
 

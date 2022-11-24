@@ -1,8 +1,8 @@
 import gym
 import unittest
-import imageio
+import imageio.v2 as imageio
 from pathlib import Path
-from jss_env.envs import JssEnv
+from envs import JssEnv
 
 
 ROOT = Path(__file__).parents[1].absolute()
