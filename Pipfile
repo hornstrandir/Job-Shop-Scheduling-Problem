@@ -16,6 +16,7 @@ dm-tree = "*"
 ray = {extras = ["rllib"], version = "*"}
 gym = "*"
 tensorflow = "*"
+pre-commit = "*"
 
 [dev-packages]
 
