@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 import plotly.figure_factory as ff
 
+# TODO:
+
 
 class EnergyFlexibleJssEnv(gym.Env):
     def __init__(self, env_config=None):
@@ -61,6 +63,7 @@ class EnergyFlexibleJssEnv(gym.Env):
         self.illegal_actions = None
         self.action_illegal_no_op = None
         self.machine_legal = None
+        self.total_energy_costs = 0
         # initial values for variables used for representation
         self.start_timestamp = datetime.datetime.now().timestamp()
         self.sum_op = 0
@@ -141,6 +144,7 @@ class EnergyFlexibleJssEnv(gym.Env):
         return self.legal_actions
 
     def reset(self):
+        self.total_energy_costs = 0
         self.current_time_step = 0
         self.next_time_step = list()
         self.next_jobs = list()
@@ -382,6 +386,7 @@ class EnergyFlexibleJssEnv(gym.Env):
                 )
                 self.state[job][8] = avg_price / self.max_energy_price
 
+    # TODO: energy penalty can contain total energy costs
     def _calculate_energy_penalty(self, action: int, processing_time: int):
         """
         Calculate the energy penalty. The penalty is scaled by the max_price.
@@ -411,6 +416,14 @@ class EnergyFlexibleJssEnv(gym.Env):
         return (1 - self.penalty_weight) * (
             reward / self.max_time_op
         ) + self.penalty_weight * energy_penalty
+
+    def _update_total_energy_costs(self):
+        power_consumption = self.power_consumption_machines.copy()
+        # Legal machines are idle. Thus they don't consume energy.
+        power_consumption[self.machine_legal] = 0
+        self.total_energy_costs += np.sum(
+            power_consumption * self.ts_energy_prices[self.current_time_step]
+        )
 
     def increase_time_step(self):
         """
