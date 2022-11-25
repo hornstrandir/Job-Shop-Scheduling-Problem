@@ -1,15 +1,14 @@
 import bisect
 import datetime
+import pickle
 import random
-
-import pandas as pd
-import gym
-import numpy as np
-import plotly.figure_factory as ff
 from pathlib import Path
 
-class IllegalActionError(Exception):
-    pass
+import gym
+import numpy as np
+import pandas as pd
+import plotly.figure_factory as ff
+
 
 class EnergyFlexibleJssEnv(gym.Env):
     def __init__(self, env_config=None):
@@ -23,13 +22,8 @@ class EnergyFlexibleJssEnv(gym.Env):
         -
         :param env_config: Ray dictionary of config parameter
         """
-        if env_config is None:
-            env_config = {
-                "instance_path": str(Path(__file__).parents[3].absolute())
-                + "/data/instances/ta01"
-            }
         instance_path = env_config["instance_path"]
-
+        energy_data_path = env_config["energy_data_path"]
         # initial values for variables used for instance
         self.jobs = 0
         self.machines = 0
@@ -39,6 +33,15 @@ class EnergyFlexibleJssEnv(gym.Env):
         self.max_time_jobs = 0
         self.nb_legal_actions = 0
         self.nb_machine_legal = 0
+        ##################################################
+        with open(energy_data_path, "rb") as file:
+            self.ts_energy_prices = np.array(
+                pickle.load(file, encoding="unicode_escape")
+            )
+        self.max_energy_price = np.amax(self.ts_energy_prices)
+        self.current_energy_price = None
+        self.penalty_weight = env_config["penalty_weight"]  # alpha
+        ##################################################
         # initial values for variables used for solving (to reinitialize when reset() is called)
         self.solution = None
         self.last_solution = None
@@ -92,6 +95,9 @@ class EnergyFlexibleJssEnv(gym.Env):
             line_str = instance_file.readline()
             line_cnt += 1
         instance_file.close()
+        self.power_consumption_machines = np.array(
+            env_config["power_consumption_machines"][str(self.machines)]
+        )
         self.max_time_jobs = max(self.jobs_length)
         # check the parsed data are correct
         assert self.max_time_op > 0
@@ -119,7 +125,7 @@ class EnergyFlexibleJssEnv(gym.Env):
             {
                 "action_mask": gym.spaces.Box(0, 1, shape=(self.jobs + 1,)),
                 "real_obs": gym.spaces.Box(
-                    low=0.0, high=1.0, shape=(self.jobs, 7), dtype=float
+                    low=0.0, high=1.0, shape=(self.jobs, 9), dtype=float
                 ),
             }
         )
@@ -155,13 +161,14 @@ class EnergyFlexibleJssEnv(gym.Env):
         self.illegal_actions = np.zeros((self.machines, self.jobs), dtype=bool)
         self.action_illegal_no_op = np.zeros(self.jobs, dtype=bool)
         self.machine_legal = np.zeros(self.machines, dtype=bool)
+        self.current_energy_price = self.ts_energy_prices[0]
         for job in range(self.jobs):
             needed_machine = self.instance_matrix[job][0][0]
             self.needed_machine_jobs[job] = needed_machine
             if not self.machine_legal[needed_machine]:
                 self.machine_legal[needed_machine] = True
                 self.nb_machine_legal += 1
-        self.state = np.zeros((self.jobs, 7), dtype=float)
+        self.state = np.zeros((self.jobs, 9), dtype=float)
         return self._get_current_state_representation()
 
     def _prioritization_non_final(self):
@@ -310,6 +317,7 @@ class EnergyFlexibleJssEnv(gym.Env):
             current_time_step_job = self.todo_time_step_job[action]
             machine_needed = self.needed_machine_jobs[action]
             time_needed = self.instance_matrix[action][current_time_step_job][1]
+            energy_penalty = self._calculate_energy_penalty(action, time_needed)
             reward += time_needed
             self.time_until_available_machine[machine_needed] = time_needed
             self.time_until_finish_current_op_jobs[action] = time_needed
@@ -320,6 +328,7 @@ class EnergyFlexibleJssEnv(gym.Env):
                 self.next_time_step.insert(index, to_add_time_step)
                 self.next_jobs.insert(index, action)
             self.solution[action][current_time_step_job] = self.current_time_step
+            # Set actions that need the currently allocated machine as illegal.
             for job in range(self.jobs):
                 if (
                     self.needed_machine_jobs[job] == machine_needed
@@ -339,7 +348,7 @@ class EnergyFlexibleJssEnv(gym.Env):
             self._prioritization_non_final()
             self._check_no_op()
             # we then need to scale the reward
-            scaled_reward = self._reward_scaler(reward)
+            scaled_reward = self._reward_scaler(reward, energy_penalty)
             return (
                 self._get_current_state_representation(),
                 scaled_reward,
@@ -347,12 +356,66 @@ class EnergyFlexibleJssEnv(gym.Env):
                 {},
             )
 
-    def _reward_scaler(self, reward):
-        return reward / self.max_time_op
+    def _update_power_observations(self):
+        """
+        Must be after increasing the timestep since the calculations
+        depend on the next states repr.
+        """
+        for job in range(self.jobs):
+            ## TODO: Dont know if 0 is a sophisticated solution
+            if self.todo_operation_job[job] == self.machines:
+                self.state[job][7] = 1.0
+                self.state[job][8] = 1.0
+            else:
+                needed_machine = self.needed_machine_jobs[job]
+                self.state[job][7] = (
+                    self.power_consumption_machines[needed_machine]
+                    / self.max_power_consumption
+                )
+                duration = self.instance_matrix[job, self.todo_operation_job[job]][1]
+                # since we are only interested in observations of legal actions,
+                # we take the avg of the time when the action can be selected.
+                avg_price = np.average(
+                    self.ts_energy_prices[
+                        self.current_time_step : self.current_time_step + duration
+                    ]
+                )
+                self.state[job][8] = avg_price / self.max_energy_price
+
+    def _calculate_energy_penalty(self, action: int, processing_time: int):
+        """
+        Calculate the energy penalty. The penalty is scaled by the max_price.
+
+        penalty = avg(price_vector) * power_consumption_machine / 60 / max_price
+        """
+        avg_price = np.average(
+            self.ts_energy_prices[
+                self.current_time_step : self.current_time_step + processing_time
+            ]
+        )
+        power_consumption = self.power_consumption_machines[
+            self.needed_machine_jobs[action]
+        ]
+        # €/MWh to €/kWmin
+        # using ratio avg_price/max_energy_price thus unitless
+        return avg_price / self.max_energy_price / 60 * power_consumption
+
+    # TODO: Impact of ignoring energy_reward for noop.
+    def _reward_scaler(self, reward, energy_penalty=0):
+        """
+        Calculate the scaled reward consisting of the regular unscaled reward
+        and the scaled energy_penalty.
+        """
+        if energy_penalty == 0:
+            return reward / self.max_time_op
+        return (1 - self.penalty_weight) * (
+            reward / self.max_time_op
+        ) + self.penalty_weight * energy_penalty
 
     def increase_time_step(self):
         """
-        The heart of the logic his here, we need to increase every counter when we have a nope action called
+        The heart of the logic his here, we need to increase every
+        counter when we have a nope action called
         and return the time elapsed
         :return: time elapsed
         """
@@ -364,6 +427,7 @@ class EnergyFlexibleJssEnv(gym.Env):
         for job in range(self.jobs):
             was_left_time = self.time_until_finish_current_op_jobs[job]
             if was_left_time > 0:
+                # Note: performed_op_job is the delta_t to the next time step if the op is not already finished before.
                 performed_op_job = min(difference, was_left_time)
                 self.time_until_finish_current_op_jobs[job] = max(
                     0, self.time_until_finish_current_op_jobs[job] - difference
@@ -400,7 +464,9 @@ class EnergyFlexibleJssEnv(gym.Env):
                         self.needed_machine_jobs[job] = -1
                         # this allow to have 1 is job is over (not 0 because, 0 strongly indicate that the job is a
                         # good candidate)
-                        self.state[job][4] = 1.0
+                        self.state[job][
+                            4
+                        ] = 1.0  # a5: required time until the machine for the next op is free, scaled
                         if self.legal_actions[job]:
                             self.legal_actions[job] = False
                             self.nb_legal_actions -= 1
@@ -466,4 +532,4 @@ class EnergyFlexibleJssEnv(gym.Env):
             fig.update_yaxes(
                 autorange="reversed"
             )  # otherwise tasks are listed from the bottom up
-        return fig  
+        return fig
