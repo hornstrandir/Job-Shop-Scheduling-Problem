@@ -5,7 +5,8 @@ import multiprocessing as mp
 import numpy as np
 import ray
 import wandb
-from envs import JssEnv
+from envs.jss_env import JssEnv
+from envs.energy_flexible_jss_env import EnergyFlexibleJssEnv
 from utils.config import ENV_CONFIG
 from utils.config import MODIFIED_CONFIG_PPO
 from utils.CustomCallbacks import CustomCallbacks
@@ -31,7 +32,7 @@ if __name__ == "__main__":
     np.random.seed(0)
     random.seed(0)
 
-    register_env("JssEnv-v0", lambda config: JssEnv(config))
+    register_env("JssEnv-v0", lambda config: EnergyFlexibleJssEnv(config))
     ModelCatalog.register_custom_model("fc_masked_model_tf", FCMaskedActionsModelTF)
 
     ppo_config = ppo.DEFAULT_CONFIG.copy()
