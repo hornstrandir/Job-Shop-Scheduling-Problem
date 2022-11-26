@@ -10,8 +10,29 @@ MODEL_CONFIG = {
 }
 
 ENV_CONFIG = {
-    "instance_path": ROOT / "data/instances/ta02",
-    "disable_env_checking": True,
+    "instance_path": ROOT / "data/instances/ta10",
+    "energy_data_path": ROOT / "data/energy_data/elect_price_2022.pkl",
+    "power_consumption_machines": {
+        "15": [
+            1,
+            15,
+            6,
+            18,
+            17,
+            7,
+            8,
+            2,
+            8,
+            9,
+            1,
+            5,
+            10,
+            2,
+            3,
+        ],
+        "20": [3, 8, 19, 6, 1, 19, 13, 9, 5, 18, 9, 1, 15, 9, 13, 14, 7, 9, 2, 3],
+    },
+    "penalty_weight": 0.5,
 }
 MODIFIED_CONFIG_PPO = {
     "env": "JssEnv-v0", 
