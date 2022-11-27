@@ -101,6 +101,7 @@ class EnergyFlexibleJssEnv(gym.Env):
         self.power_consumption_machines = np.array(
             env_config["power_consumption_machines"][str(self.machines)]
         )
+        self.max_power_consumption = np.max(self.power_consumption_machines)
         self.max_time_jobs = max(self.jobs_length)
         # check the parsed data are correct
         assert self.max_time_op > 0
@@ -308,7 +309,7 @@ class EnergyFlexibleJssEnv(gym.Env):
                     self.action_illegal_no_op[job] = True
             while self.nb_machine_legal == 0:
                 reward -= self.increase_time_step()
-            scaled_reward = self._reward_scaler(reward)
+            scaled_reward = self._reward_scaler(reward, energy_penalty=0)
             self._prioritization_non_final()
             self._check_no_op()
             return (
@@ -405,7 +406,7 @@ class EnergyFlexibleJssEnv(gym.Env):
         return avg_price / self.max_energy_price * power_consumption / self.max_power_consumption
 
     # TODO: Impact of ignoring energy_reward for noop.
-    def _reward_scaler(self, reward, energy_penalty):
+    def _reward_scaler(self, reward: float, energy_penalty: float = 0):
         """
         Calculate the scaled reward consisting of the regular unscaled reward
         and the scaled energy_penalty.
