@@ -33,6 +33,7 @@ ENV_CONFIG = {
         "20": [3, 8, 19, 6, 1, 19, 13, 9, 5, 18, 9, 1, 15, 9, 13, 14, 7, 9, 2, 3],
     },
     "penalty_weight": 0.5,
+    "disable_env_checking": True,
 }
 MODIFIED_CONFIG_PPO = {
     "env": "JssEnv-v0", 
