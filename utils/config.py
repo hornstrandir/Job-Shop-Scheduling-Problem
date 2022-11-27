@@ -11,7 +11,7 @@ MODEL_CONFIG = {
 
 ENV_CONFIG = {
     "instance_path": ROOT / "data/instances/ta10",
-    "energy_data_path": ROOT / "data/energy_data/elect_price_2022.pkl",
+    "energy_data_path": ROOT / "data/energy_data/elect_price_2022_kwmin.pkl",
     "power_consumption_machines": {
         "15": [
             1,
