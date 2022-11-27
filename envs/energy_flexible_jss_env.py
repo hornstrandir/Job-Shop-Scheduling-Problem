@@ -507,6 +507,7 @@ class EnergyFlexibleJssEnv(gym.Env):
                         if not self.machine_legal[machine]:
                             self.machine_legal[machine] = True
                             self.nb_machine_legal += 1
+        self._update_power_observations()
         return hole_planning
 
     def _is_done(self):
