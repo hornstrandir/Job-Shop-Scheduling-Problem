@@ -401,7 +401,6 @@ class EnergyFlexibleJssEnv(gym.Env):
         power_consumption = self.power_consumption_machines[
             self.needed_machine_jobs[action]
         ]
-        # €/MWh to €/kWmin
         # using ratio avg_price/max_energy_price thus unitless
         return avg_price / self.max_energy_price / 60 * power_consumption
 
