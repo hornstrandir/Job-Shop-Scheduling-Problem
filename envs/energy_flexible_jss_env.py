@@ -362,7 +362,7 @@ class EnergyFlexibleJssEnv(gym.Env):
 
     def _update_power_observations(self):
         """
-        Must be after increasing the timestep since the calculations
+        Must be called after increasing the timestep since the calculations
         depend on the next states repr.
         """
         for job in range(self.jobs):
@@ -402,10 +402,10 @@ class EnergyFlexibleJssEnv(gym.Env):
             self.needed_machine_jobs[action]
         ]
         # using ratio avg_price/max_energy_price thus unitless
-        return avg_price / self.max_energy_price / 60 * power_consumption
+        return avg_price / self.max_energy_price * power_consumption / self.max_power_consumption
 
     # TODO: Impact of ignoring energy_reward for noop.
-    def _reward_scaler(self, reward, energy_penalty=0):
+    def _reward_scaler(self, reward, energy_penalty):
         """
         Calculate the scaled reward consisting of the regular unscaled reward
         and the scaled energy_penalty.
