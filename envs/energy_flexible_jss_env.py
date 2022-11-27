@@ -54,7 +54,7 @@ class EnergyFlexibleJssEnv(gym.Env):
         self.legal_actions = None
         self.time_until_available_machine = None
         self.time_until_finish_current_op_jobs = None
-        self.todo_time_step_job = None
+        self.todo_op_jobs = None
         self.total_perform_op_time_jobs = None
         self.needed_machine_jobs = None
         self.total_idle_time_jobs = None
@@ -158,7 +158,7 @@ class EnergyFlexibleJssEnv(gym.Env):
         self.solution = np.full((self.jobs, self.machines), -1, dtype=int)
         self.time_until_available_machine = np.zeros(self.machines, dtype=int)
         self.time_until_finish_current_op_jobs = np.zeros(self.jobs, dtype=int)
-        self.todo_time_step_job = np.zeros(self.jobs, dtype=int)
+        self.todo_op_jobs = np.zeros(self.jobs, dtype=int)
         self.total_perform_op_time_jobs = np.zeros(self.jobs, dtype=int)
         self.needed_machine_jobs = np.zeros(self.jobs, dtype=int)
         self.total_idle_time_jobs = np.zeros(self.jobs, dtype=int)
@@ -188,10 +188,10 @@ class EnergyFlexibleJssEnv(gym.Env):
                             self.needed_machine_jobs[job] == machine
                             and self.legal_actions[job]
                         ):
-                            if self.todo_time_step_job[job] == (self.machines - 1):
+                            if self.todo_op_jobs[job] == (self.machines - 1):
                                 final_job.append(job)
                             else:
-                                current_time_step_non_final = self.todo_time_step_job[
+                                current_time_step_non_final = self.todo_op_jobs[
                                     job
                                 ]
                                 time_needed_legal = self.instance_matrix[job][
@@ -212,7 +212,7 @@ class EnergyFlexibleJssEnv(gym.Env):
                                     non_final_job.append(job)
                     if len(non_final_job) > 0:
                         for job in final_job:
-                            current_time_step_final = self.todo_time_step_job[job]
+                            current_time_step_final = self.todo_op_jobs[job]
                             time_needed_legal = self.instance_matrix[job][
                                 current_time_step_final
                             ][1]
@@ -235,7 +235,7 @@ class EnergyFlexibleJssEnv(gym.Env):
             ]
             for job in range(self.jobs):
                 if self.legal_actions[job]:
-                    time_step = self.todo_time_step_job[job]
+                    time_step = self.todo_op_jobs[job]
                     machine_needed = self.instance_matrix[job][time_step][0]
                     time_needed = self.instance_matrix[job][time_step][1]
                     end_job = self.current_time_step + time_needed
@@ -249,9 +249,9 @@ class EnergyFlexibleJssEnv(gym.Env):
                 if not self.legal_actions[job]:
                     if (
                         self.time_until_finish_current_op_jobs[job] > 0
-                        and self.todo_time_step_job[job] + 1 < self.machines
+                        and self.todo_op_jobs[job] + 1 < self.machines
                     ):
-                        time_step = self.todo_time_step_job[job] + 1
+                        time_step = self.todo_op_jobs[job] + 1
                         time_needed = (
                             self.current_time_step
                             + self.time_until_finish_current_op_jobs[job]
@@ -272,9 +272,9 @@ class EnergyFlexibleJssEnv(gym.Env):
                             time_step += 1
                     elif (
                         not self.action_illegal_no_op[job]
-                        and self.todo_time_step_job[job] < self.machines
+                        and self.todo_op_jobs[job] < self.machines
                     ):
-                        time_step = self.todo_time_step_job[job]
+                        time_step = self.todo_op_jobs[job]
                         machine_needed = self.instance_matrix[job][time_step][0]
                         time_needed = (
                             self.current_time_step
@@ -319,7 +319,7 @@ class EnergyFlexibleJssEnv(gym.Env):
                 {},
             )
         else:
-            current_time_step_job = self.todo_time_step_job[action]
+            current_time_step_job = self.todo_op_jobs[action]
             machine_needed = self.needed_machine_jobs[action]
             time_needed = self.instance_matrix[action][current_time_step_job][1]
             energy_penalty = self._calculate_energy_penalty(action, time_needed)
@@ -368,7 +368,7 @@ class EnergyFlexibleJssEnv(gym.Env):
         """
         for job in range(self.jobs):
             ## TODO: Dont know if 0 is a sophisticated solution
-            if self.todo_operation_job[job] == self.machines:
+            if self.todo_op_jobs[job] == self.machines:
                 self.state[job][7] = 1.0
                 self.state[job][8] = 1.0
             else:
@@ -377,7 +377,7 @@ class EnergyFlexibleJssEnv(gym.Env):
                     self.power_consumption_machines[needed_machine]
                     / self.max_power_consumption
                 )
-                duration = self.instance_matrix[job, self.todo_operation_job[job]][1]
+                duration = self.instance_matrix[job, self.todo_op_jobs[job]][1]
                 # since we are only interested in observations of legal actions,
                 # we take the avg of the time when the action can be selected.
                 avg_price = np.average(
@@ -457,11 +457,11 @@ class EnergyFlexibleJssEnv(gym.Env):
                     self.state[job][6] = self.total_idle_time_jobs[job] / self.sum_op
                     self.idle_time_jobs_last_op[job] = difference - was_left_time
                     self.state[job][5] = self.idle_time_jobs_last_op[job] / self.sum_op
-                    self.todo_time_step_job[job] += 1
-                    self.state[job][2] = self.todo_time_step_job[job] / self.machines
-                    if self.todo_time_step_job[job] < self.machines:
+                    self.todo_op_jobs[job] += 1
+                    self.state[job][2] = self.todo_op_jobs[job] / self.machines
+                    if self.todo_op_jobs[job] < self.machines:
                         self.needed_machine_jobs[job] = self.instance_matrix[job][
-                            self.todo_time_step_job[job]
+                            self.todo_op_jobs[job]
                         ][0]
                         self.state[job][4] = (
                             max(
@@ -483,7 +483,7 @@ class EnergyFlexibleJssEnv(gym.Env):
                         if self.legal_actions[job]:
                             self.legal_actions[job] = False
                             self.nb_legal_actions -= 1
-            elif self.todo_time_step_job[job] < self.machines:
+            elif self.todo_op_jobs[job] < self.machines:
                 self.total_idle_time_jobs[job] += difference
                 self.idle_time_jobs_last_op[job] += difference
                 self.state[job][5] = self.idle_time_jobs_last_op[job] / self.sum_op
@@ -508,6 +508,7 @@ class EnergyFlexibleJssEnv(gym.Env):
                             self.machine_legal[machine] = True
                             self.nb_machine_legal += 1
         self._update_power_observations()
+        self._update_total_energy_costs()
         return hole_planning
 
     def _is_done(self):
