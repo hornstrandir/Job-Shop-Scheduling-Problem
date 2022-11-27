@@ -48,10 +48,11 @@ if __name__ == "__main__":
     while start_time + stop['time_total_s'] > time.time():
         result = trainer.train()
         
-        #print(result["custom_metrics"])
+        #print(result)
         #result = wandb_tune._clean_log(result)
         #log, config_update = _handle_result(result)
         wandb.log(result["custom_metrics"])
+        wandb.log(result["sampler_results"])
         # wandb.config.update(config_update, allow_val_change=True)
     # trainer.export_policy_model("/home/jupyter/JSS/JSS/models/")
 
