@@ -63,7 +63,7 @@ class EnergyFlexibleJssEnv(gym.Env):
         self.illegal_actions = None
         self.action_illegal_no_op = None
         self.machine_legal = None
-        self.total_energy_costs = 0
+        self._total_energy_costs = 0
         # initial values for variables used for representation
         self.start_timestamp = datetime.datetime.now().timestamp()
         self.sum_op = 0
@@ -145,7 +145,7 @@ class EnergyFlexibleJssEnv(gym.Env):
         return self.legal_actions
 
     def reset(self):
-        self.total_energy_costs = 0
+        self._total_energy_costs = 0
         self.current_time_step = 0
         self.next_time_step = list()
         self.next_jobs = list()
@@ -421,7 +421,7 @@ class EnergyFlexibleJssEnv(gym.Env):
         power_consumption = self.power_consumption_machines.copy()
         # Legal machines are idle. Thus they don't consume energy.
         power_consumption[self.machine_legal] = 0
-        self.total_energy_costs += np.sum(
+        self._total_energy_costs += np.sum(
             power_consumption * self.ts_energy_prices[self.current_time_step]
         )
 
@@ -548,3 +548,17 @@ class EnergyFlexibleJssEnv(gym.Env):
                 autorange="reversed"
             )  # otherwise tasks are listed from the bottom up
         return fig
+
+    @property
+    def total_energy_costs(self):
+        total_energy_costs = 0
+        for job in range(self.jobs):
+            for op in range(self.machines):
+                op_start_time = self.solution[job][op]
+                machine = self.instance_matrix[job][op][0]
+                op_duration = self.instance_matrix[job][op][1]
+                avg_price = np.average(
+                    self.ts_energy_prices[op_start_time:op_start_time+op_duration]
+                )
+                total_energy_costs += avg_price*self.power_consumption_machines[machine]*op_duration
+        return total_energy_costs
