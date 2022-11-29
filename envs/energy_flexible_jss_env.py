@@ -415,7 +415,7 @@ class EnergyFlexibleJssEnv(gym.Env):
             return reward / self.max_time_op
         return (1 - self.penalty_weight) * (
             reward / self.max_time_op
-        ) + self.penalty_weight * energy_penalty
+        ) - self.penalty_weight * energy_penalty
 
     def _update_total_energy_costs(self):
         power_consumption = self.power_consumption_machines.copy()
