@@ -22,13 +22,12 @@ from algorithms.fcnn_model import FCMaskedActionsModelTF
 
 tf1, tf, tfv = try_import_tf()
 
-def train(alpha):
+def train(penalty_weight):
     ray.init()
-    name = "alpha" + str(alpha)
-    run = wandb.init(
+    wandb.init(
         config=MODIFIED_CONFIG_PPO, 
-        reinit=True,
-        name=name)
+        reinit=True)
+    wandb.run.name += "penalty_weight" + str(penalty_weight)
     tf.random.set_seed(0)
     np.random.seed(0)
     random.seed(0)
@@ -36,7 +35,7 @@ def train(alpha):
     register_env("JssEnv-v0", lambda config: EnergyFlexibleJssEnv(config))
     ModelCatalog.register_custom_model("fc_masked_model_tf", FCMaskedActionsModelTF)
 
-    MODIFIED_CONFIG_PPO["env_config"]["alpha"] = alpha
+    MODIFIED_CONFIG_PPO["env_config"]["penalty_weight"] = penalty_weight
 
     ppo_config = ppo.DEFAULT_CONFIG.copy()
     ppo_config.update(MODIFIED_CONFIG_PPO)
@@ -59,9 +58,10 @@ def train(alpha):
         # wandb.config.update(config_update, allow_val_change=True)
     # trainer.export_policy_model("/home/jupyter/JSS/JSS/models/")
     
-    run.finish()
+    wandb.finish()
     ray.shutdown()    
 
 if __name__ == "__main__":
-    for alpha in [0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]:
-        train(alpha=alpha)
+    for i in range(11):
+        penalty_weight = i/10
+        train(penalty_weight=penalty_weight)
