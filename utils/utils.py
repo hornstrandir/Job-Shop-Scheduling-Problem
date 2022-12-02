@@ -3,9 +3,6 @@ Module for utility functions.
 """
 from pathlib import Path
 
-
-
-
 ROOT = Path(__file__).parents[2].absolute()
 
 # configs:
@@ -63,23 +60,35 @@ PPO_CONFIG = {
     "batch_mode": "truncate_episodes",
     # Which observation filter to apply to the observation.
     "observation_filter": "NoFilter",
-
     # Deprecated keys:
     # Share layers for value function. If you set this to True, it's important
     # to tune vf_loss_coeff.
     # Use config.model.vf_share_layers instead.
-    #"vf_share_layers": DEPRECATED_VALUE,
+    # "vf_share_layers": DEPRECATED_VALUE,
 }
 
 ENV_CONFIG = {
-    "instance_path": ROOT / "data/instances/ta10"
+    "instance_path": ROOT / "data/instances/ta10",
+    "energy_data_path": ROOT / "data/elect_price_2022.pkl",
+    "power_consumption_machines": {
+        "15": [
+            1,
+            15,
+            6,
+            18,
+            17,
+            7,
+            8,
+            2,
+            8,
+            9,
+            1,
+            5,
+            10,
+            2,
+            3,
+        ],
+        "20": [3, 8, 19, 6, 1, 19, 13, 9, 5, 18, 9, 1, 15, 9, 13, 14, 7, 9, 2, 3],
+    },
+    "penalty_weight": 0.5,
 }
-
-def get_env_config():
-    return ENV_CONFIG
-
-def get_agents_config(agent: str = None):
-    if agent == "PPO":
-        return PPO_CONFIG
-    print(f"{agent} cannot find a specific config for ")
-    return 

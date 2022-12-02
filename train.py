@@ -5,7 +5,8 @@ import multiprocessing as mp
 import numpy as np
 import ray
 import wandb
-from envs import JssEnv
+from envs.jss_env import JssEnv
+from envs.energy_flexible_jss_env import EnergyFlexibleJssEnv
 from utils.config import ENV_CONFIG
 from utils.config import MODIFIED_CONFIG_PPO
 from utils.CustomCallbacks import CustomCallbacks
@@ -31,7 +32,7 @@ if __name__ == "__main__":
     np.random.seed(0)
     random.seed(0)
 
-    register_env("JssEnv-v0", lambda config: JssEnv(config))
+    register_env("JssEnv-v0", lambda config: EnergyFlexibleJssEnv(config))
     ModelCatalog.register_custom_model("fc_masked_model_tf", FCMaskedActionsModelTF)
 
     ppo_config = ppo.DEFAULT_CONFIG.copy()
@@ -47,10 +48,11 @@ if __name__ == "__main__":
     while start_time + stop['time_total_s'] > time.time():
         result = trainer.train()
         
-        #print(result["custom_metrics"])
+        #print(result)
         #result = wandb_tune._clean_log(result)
         #log, config_update = _handle_result(result)
         wandb.log(result["custom_metrics"])
+        wandb.log(result["sampler_results"])
         # wandb.config.update(config_update, allow_val_change=True)
     # trainer.export_policy_model("/home/jupyter/JSS/JSS/models/")
 
