@@ -10,8 +10,9 @@ MODEL_CONFIG = {
 }
 
 ENV_CONFIG = {
-    "instance_path": ROOT / "data/instances/ta10",
-    "energy_data_path": ROOT / "data/energy_data/elect_price_2022_kwmin.pkl",
+    "instance_path": ROOT / "data/instances/ta01",
+    "price_data_path": ROOT / "data/energy_data/price_MinMax_sept_14_days.npy",
+    "price_data_scaled_path": ROOT / "data/energy_data/price_MinMax_sept_14_days.npy",
     "power_consumption_machines": {
         "15": [
             1,
@@ -32,7 +33,8 @@ ENV_CONFIG = {
         ],
         "20": [3, 8, 19, 6, 1, 19, 13, 9, 5, 18, 9, 1, 15, 9, 13, 14, 7, 9, 2, 3],
     },
-    "penalty_weight": 0.75,
+    "penalty_weight": 0.8,
+    "loose_noop_restrictions": True,
 }
 MODIFIED_CONFIG_PPO = {
     "env": "JssEnv-v0", 
