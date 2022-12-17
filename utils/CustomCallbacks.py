@@ -24,3 +24,4 @@ class CustomCallbacks(DefaultCallbacks):
         if env.last_time_step != float("inf"):
             episode.custom_metrics["make_span"] = env.last_time_step
             episode.custom_metrics["total_energy_costs"] = env.total_energy_costs
+            episode.custom_metrics["number_noop_actions"] = env.number_noop_actions
