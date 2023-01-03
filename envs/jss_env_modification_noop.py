@@ -25,9 +25,7 @@ class EnergyFlexibleJssEnv(gym.Env):
         :param env_config: Ray dictionary of config parameter
         """
         instance_path = env_config["instance_path"]
-        price_data_path = env_config["price_data_path"]
-        #price_data_scaled_path = env_config["price_data_scaled_path"]
-        self.loose_noop_restrictions = env_config["loose_noop_restrictions"]
+        energy_data_path = env_config["price_data_path"]
         # initial values for variables used for instance
         self.jobs = 0
         self.machines = 0
@@ -39,9 +37,11 @@ class EnergyFlexibleJssEnv(gym.Env):
         self.nb_machine_legal = 0
         self.number_noop_actions = 0
         ##################################################
-        self.ts_energy_prices = np.load(price_data_path)
+        with open(energy_data_path, "rb") as file:
+            self.ts_energy_prices = np.array(
+                pickle.load(file, encoding="unicode_escape")
+            )
         self.max_energy_price = np.amax(self.ts_energy_prices)
-        self.min_energy_price = np.amin(self.ts_energy_prices)
         self.current_energy_price = None
         self.penalty_weight = env_config["penalty_weight"]  # alpha
         ##################################################
@@ -224,11 +224,11 @@ class EnergyFlexibleJssEnv(gym.Env):
 
     def _check_no_op(self):
         self.legal_actions[self.jobs] = False
-        if not self.loose_noop_restrictions:
-            noop_restriction = self.nb_machine_legal <= 3 and self.nb_legal_actions <= 4
-        else:
-            noop_restriction = True
-        if len(self.next_time_step) > 0 and noop_restriction:
+        if (
+            len(self.next_time_step) > 0
+            #and self.nb_machine_legal <= 3
+            #and self.nb_legal_actions <= 4
+        ):
             machine_next = set()
             next_time_step = self.next_time_step[0]
             max_horizon = self.current_time_step
@@ -296,9 +296,7 @@ class EnergyFlexibleJssEnv(gym.Env):
                                     return
                             time_needed += self.instance_matrix[job][time_step][1]
                             time_step += 1
-
-    def _check_no_op_modified(self):
-        self.legal_actions[self.jobs] = True
+    
 
     def step(self, action: int):
         reward = 0.0
@@ -391,9 +389,16 @@ class EnergyFlexibleJssEnv(gym.Env):
                         self.current_time_step : self.current_time_step + duration
                     ]
                 )
-                # MinMax scaling:
-                scaled_avg = (avg_price - self.min_energy_price) / (self.max_energy_price-self.min_energy_price)
-                self.state[job][8] = scaled_avg
+                self.state[job][8] = avg_price / self.max_energy_price
+                if avg_price / self.max_energy_price < 0:
+                    print(f"current time step: {self.current_time_step}")
+                    print(f"avg price: {avg_price}")
+                    print(f"max price: {self.max_energy_price}")
+                    print(f"duration: {duration}")
+
+
+                    raise ValueError("I am here")
+
 
     # TODO: energy penalty can contain total energy costs
     def _calculate_energy_penalty(self, action: int, processing_time: int):
@@ -407,8 +412,6 @@ class EnergyFlexibleJssEnv(gym.Env):
                 self.current_time_step : self.current_time_step + processing_time
             ]
         )
-        # here we can even use negative values.
-        # It is good to schedule energy intense ops when there are negative energy prices.
         power_consumption = self.power_consumption_machines[
             self.needed_machine_jobs[action]
         ]
@@ -570,8 +573,6 @@ class EnergyFlexibleJssEnv(gym.Env):
                 avg_price = np.average(
                     self.ts_energy_prices[op_start_time:op_start_time+op_duration]
                 )
-                avg_price *= (self.max_energy_price - self.min_energy_price)
-                avg_price += self.min_energy_price
-                total_energy_costs += avg_price * 60 / 1000 * self.power_consumption_machines[machine] * op_duration
+                total_energy_costs += avg_price*self.power_consumption_machines[machine]*op_duration
         return total_energy_costs
     

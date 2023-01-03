@@ -62,6 +62,8 @@ def train(penalty_weight):
     ray.shutdown()    
 
 if __name__ == "__main__":
-    for i in range(11):
-        penalty_weight = i/10
-        train(penalty_weight=penalty_weight)
+    for penalty in [0, 0.5, 1]:
+        #print(i/10)
+        #penalty_weight = i/10
+        for i in range(3):
+            train(penalty_weight=penalty)

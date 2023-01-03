@@ -10,7 +10,7 @@ MODEL_CONFIG = {
 }
 
 ENV_CONFIG = {
-    "instance_path": ROOT / "data/instances/ta01",
+    "instance_path": ROOT / "data/instances/ta11",
     "price_data_path": ROOT / "data/energy_data/price_MinMax_sept_14_days.npy",
     "price_data_scaled_path": ROOT / "data/energy_data/price_MinMax_sept_14_days.npy",
     "power_consumption_machines": {

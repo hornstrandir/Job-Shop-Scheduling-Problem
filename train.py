@@ -6,7 +6,7 @@ import numpy as np
 import ray
 import wandb
 from envs.jss_env import JssEnv
-from envs.energy_flexible_jss_env import EnergyFlexibleJssEnv
+from envs.energy_flexible_jss_env2 import EnergyFlexibleJssEnv
 from utils.config import ENV_CONFIG
 from utils.config import MODIFIED_CONFIG_PPO
 from utils.CustomCallbacks import CustomCallbacks
